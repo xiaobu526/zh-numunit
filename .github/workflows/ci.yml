@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 测试 (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: 单元测试
+        run: node scripts/test.mjs
+
+      - name: 规范样例应零报错
+        run: node scripts/numunit.mjs check examples/good.md
+
+      - name: 错误样例应被检出
+        run: |
+          set +e
+          node scripts/numunit.mjs check examples/bad.md > /tmp/bad.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/bad.log
+          if [ "$code" -eq 0 ]; then
+            echo "::error file=examples/bad.md::错误样例未检出任何问题，规则可能已失效"
+            exit 1
+          fi
+          echo "已按预期检出问题（退出码 $code）"
+
+      - name: 自动修复应消除全部错误
+        run: |
+          cp examples/bad.md /tmp/fix.md
+          node scripts/numunit.mjs fix /tmp/fix.md --write > /dev/null 2>&1 || true
+          node scripts/numunit.mjs check /tmp/fix.md
+          echo "修复后无 error 级问题"
+
+  structure:
+    name: 校验 skill 结构
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 检查 SKILL.md frontmatter
+        run: |
+          [ "$(head -1 SKILL.md)" = "---" ] || { echo "::error::SKILL.md 缺少 frontmatter"; exit 1; }
+          grep -q '^name: zh-numunit$' SKILL.md || { echo "::error::SKILL.md 的 name 字段应为中心式命名且与目录一致"; exit 1; }
+          grep -q '^description: ' SKILL.md || { echo "::error::SKILL.md 缺少 description 字段"; exit 1; }
+          echo "SKILL.md 结构正常"
+
+      - name: 检查必需文件
+        run: |
+          for f in README.md LICENSE SKILL.md package.json scripts/numunit.mjs scripts/test.mjs references/number-form.md references/units.md references/magnitude.md examples/bad.md examples/good.md; do
+            if [ ! -f "$f" ]; then echo "::error::缺少文件 $f"; exit 1; fi
+          done
+          echo "文件齐全"
+
+      - name: 检查脚本可执行
+        run: node scripts/numunit.mjs --help > /dev/null && echo "CLI 正常"
