@@ -1,0 +1,34 @@
+{
+  "name": "zh-numunit",
+  "version": "0.1.0",
+  "description": "中文数字与单位规范化：按 GB/T 15835-2011 与 GB 3100 检查数字形式、单位符号、数量级与比率表达",
+  "type": "module",
+  "bin": {
+    "numunit": "scripts/numunit.mjs"
+  },
+  "scripts": {
+    "check": "node scripts/numunit.mjs check examples/good.md",
+    "demo": "node scripts/numunit.mjs check examples/bad.md",
+    "test": "node scripts/numunit.mjs check examples/good.md"
+  },
+  "keywords": [
+    "chinese",
+    "number",
+    "unit",
+    "linter",
+    "gb-t-15835",
+    "i18n",
+    "claude-skill",
+    "agent-skill"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "SKILL.md",
+    "references/",
+    "scripts/",
+    "examples/"
+  ],
+  "license": "MIT"
+}
